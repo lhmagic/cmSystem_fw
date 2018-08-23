@@ -1,0 +1,11 @@
+# STM32 keil MDK ignore files
+*.d
+*.o
+*.crf
+*.axf
+*.htm
+*.lnp
+*.map
+*.dep
+*.lst
+
