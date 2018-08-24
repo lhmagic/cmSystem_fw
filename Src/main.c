@@ -52,7 +52,7 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "bsp.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -60,6 +60,7 @@ ADC_HandleTypeDef hadc;
 DMA_HandleTypeDef hdma_adc;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
@@ -84,12 +85,12 @@ static void MX_ADC_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM14_Init(void);
 void StartDefaultTask(void const * argument);
 void sampleTask(void const * argument);
 void DisplayTask(void const * argument);
                                     
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-                                
                                 
 
 /* USER CODE BEGIN PFP */
@@ -109,7 +110,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+u_led disp_led;	
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -118,7 +119,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	disp_led = hc595_init();
+	hc595_write(disp_led.val);
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -136,6 +139,7 @@ int main(void)
   MX_TIM16_Init();
   MX_TIM3_Init();
   MX_USART2_UART_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -366,6 +370,23 @@ static void MX_TIM3_Init(void)
   }
 
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/* TIM14 init function */
+static void MX_TIM14_Init(void)
+{
+
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 480;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 100;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
 
 }
 
