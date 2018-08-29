@@ -20,11 +20,11 @@ return:				u_led union structure.
 u_led hc595_init(void) {
 static u_led led;
 	
-	HAL_GPIO_WritePin(LED_OE_GPIO_Port, LED_OE_Pin, GPIO_PIN_RESET);
-	HAL_Delay(1);
 	HAL_GPIO_WritePin(LED_OE_GPIO_Port, LED_OE_Pin, GPIO_PIN_SET);
+	HAL_Delay(1);
+	HAL_GPIO_WritePin(LED_OE_GPIO_Port, LED_OE_Pin, GPIO_PIN_RESET);
 	
-	led.val = 0xFFFF;
+	led.val = 0;
 	hc595_write(led.val);
 	
 	return led;
@@ -42,9 +42,9 @@ void hc595_write(uint16_t val) {
 	for(uint16_t i=0x8000; i!=0x0000; i>>=1) {
 		HAL_GPIO_WritePin(LED_SH_GPIO_Port, LED_SH_Pin, GPIO_PIN_RESET);
 		if(val&i) {
-			HAL_GPIO_WritePin(LED_DS_GPIO_Port, LED_DS_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(LED_DS_GPIO_Port, LED_DS_Pin, GPIO_PIN_RESET);
 		} else {
-			HAL_GPIO_WritePin(LED_SH_GPIO_Port, LED_SH_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_SH_GPIO_Port, LED_DS_Pin, GPIO_PIN_SET);
 		}
 		HAL_GPIO_WritePin(LED_SH_GPIO_Port, LED_SH_Pin, GPIO_PIN_SET);
 	}

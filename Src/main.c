@@ -64,7 +64,6 @@ TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_rx;
 
 osThreadId defaultTaskHandle;
@@ -84,7 +83,6 @@ static void MX_USART1_UART_Init(void);
 static void MX_ADC_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_TIM14_Init(void);
 void StartDefaultTask(void const * argument);
 void sampleTask(void const * argument);
@@ -99,7 +97,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
+uint32_t adc_buf[5];
 /* USER CODE END 0 */
 
 /**
@@ -119,8 +117,6 @@ u_led disp_led;
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	disp_led = hc595_init();
-	hc595_write(disp_led.val);
 	
   /* USER CODE END Init */
 
@@ -138,9 +134,15 @@ u_led disp_led;
   MX_ADC_Init();
   MX_TIM16_Init();
   MX_TIM3_Init();
-  MX_USART2_UART_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
+	disp_led = hc595_init();
+	get_ac_state();
+ 	get_dc_state();
+	HAL_ADCEx_Calibration_Start(&hadc);
+	HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+	HAL_ADC_Start_DMA(&hadc, adc_buf, 5);
 
   /* USER CODE END 2 */
 
@@ -463,27 +465,6 @@ static void MX_USART1_UART_Init(void)
 
 }
 
-/* USART2 init function */
-static void MX_USART2_UART_Init(void)
-{
-
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
 /** 
   * Enable DMA controller clock
   */
@@ -563,6 +544,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PB3 */
   GPIO_InitStruct.Pin = GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
@@ -578,7 +565,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+static uint16_t i=1;
+	
+	hc595_write(i<<=1);
+	for(uint8_t i=0; i<5; i++) {
+		(void)adc_buf[i];
+	}
+}
 /* USER CODE END 4 */
 
 /* StartDefaultTask function */
