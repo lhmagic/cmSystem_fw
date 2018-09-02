@@ -53,6 +53,8 @@
 
 /* USER CODE BEGIN Includes */
 #include "bsp.h"
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -64,15 +66,24 @@ TIM_HandleTypeDef htim14;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_rx;
 
 osThreadId defaultTaskHandle;
+uint32_t defaultTaskBuffer[ 64 ];
+osStaticThreadDef_t defaultTaskControlBlock;
 osThreadId regularSampleHandle;
+uint32_t regularSampleBuffer[ 64 ];
+osStaticThreadDef_t regularSampleControlBlock;
 osThreadId LedDisplayHandle;
+uint32_t LedDisplayBuffer[ 64 ];
+osStaticThreadDef_t LedDisplayControlBlock;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+const char cmd_read_status[]	=	{0x01,0x03,0x00,0x00,0x00,0x01,0x84,0x0a};
+const char cmd_read_pres1[]		=	{0x0B,0x03,0x00,0x04,0x00,0x01,0xC5,0x61};
+const char cmd_read_pres2[]		=	{0x0C,0x03,0x00,0x04,0x00,0x01,0xC4,0xD6};
+const char cmd_read_pres3[]		=	{0x0D,0x03,0x00,0x04,0x00,0x01,0xC5,0x07};
+const char cmd_read_pres4[]		=	{0x0E,0x03,0x00,0x04,0x00,0x01,0xC5,0x34};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,6 +109,8 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN 0 */
 uint32_t adc_buf[5];
+uint8_t usart_buf[8];
+uint8_t usart_rx_cplt;
 /* USER CODE END 0 */
 
 /**
@@ -108,7 +121,7 @@ uint32_t adc_buf[5];
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-u_led disp_led;	
+
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -136,14 +149,7 @@ u_led disp_led;
   MX_TIM3_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-	disp_led = hc595_init();
-	get_ac_state();
- 	get_dc_state();
-	HAL_ADCEx_Calibration_Start(&hadc);
-	HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
-	HAL_ADC_Start_DMA(&hadc, adc_buf, 5);
-
+	
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -160,15 +166,15 @@ u_led disp_led;
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 64);
+  osThreadStaticDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 64, defaultTaskBuffer, &defaultTaskControlBlock);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of regularSample */
-  osThreadDef(regularSample, sampleTask, osPriorityLow, 0, 64);
+  osThreadStaticDef(regularSample, sampleTask, osPriorityLow, 0, 64, regularSampleBuffer, &regularSampleControlBlock);
   regularSampleHandle = osThreadCreate(osThread(regularSample), NULL);
 
   /* definition and creation of LedDisplay */
-  osThreadDef(LedDisplay, DisplayTask, osPriorityLow, 0, 64);
+  osThreadStaticDef(LedDisplay, DisplayTask, osPriorityLow, 0, 64, LedDisplayBuffer, &LedDisplayControlBlock);
   LedDisplayHandle = osThreadCreate(osThread(LedDisplay), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -218,8 +224,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSI14CalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
-  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -477,9 +483,6 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-  /* DMA1_Channel2_3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 3, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
 }
 
@@ -566,12 +569,14 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-static uint16_t i=1;
+uint16_t vdd, vcalib, vref, vcs2, vcs1, vac;	
 	
-	hc595_write(i<<=1);
-	for(uint8_t i=0; i<5; i++) {
-		(void)adc_buf[i];
-	}
+	vcalib = *(uint16_t *)0x1FFFF7BA;
+//	vdd = (uint16_t)(vcalib*3300.0/adc_buf[4]);
+//	vref = (uint16_t)(adc_buf[2]*vdd/4095.0);
+//	vcs1 = (uint16_t)(adc_buf[1]*vdd/4095.0);
+//	vcs2 = (uint16_t)(adc_buf[0]*vdd/4095.0);
+//	vac = (uint16_t)(adc_buf[3]*vdd/4095.0);
 }
 /* USER CODE END 4 */
 
@@ -592,9 +597,28 @@ void StartDefaultTask(void const * argument)
 void sampleTask(void const * argument)
 {
   /* USER CODE BEGIN sampleTask */
+uint8_t msg[] = "Hello RS485.\r\n";	
+	
+//	HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
+//	HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+//	HAL_ADCEx_Calibration_Start(&hadc);
+//	HAL_ADC_Start_DMA(&hadc, adc_buf, 5);
+	HAL_UART_Receive_IT(&huart1, usart_buf, 8);
+	SET_BIT(huart1.Instance->ICR, USART_ICR_IDLECF);
+  SET_BIT(huart1.Instance->CR1, USART_CR1_IDLEIE);
+	
   /* Infinite loop */
   for(;;)
   {
+		if(usart_rx_cplt) {
+			if(strncmp(usart_buf, cmd_read_status, 8) == 0) {
+				(void)1;
+			} else {
+				(void)0;
+			}
+			usart_rx_cplt = 0;		
+			HAL_UART_Receive_IT(&huart1, usart_buf, 8);
+		}
     osDelay(1);
   }
   /* USER CODE END sampleTask */
@@ -604,10 +628,40 @@ void sampleTask(void const * argument)
 void DisplayTask(void const * argument)
 {
   /* USER CODE BEGIN DisplayTask */
+u_ac_state ac_state;	
+u_dc_state dc_state;
+u_led led;
+
+	led = hc595_init();
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+		ac_state = get_ac_state();
+		dc_state = get_dc_state();
+		led.val = 0;
+		//AC indicator leds
+		if(ac_state.pump1_fail) {
+			led.pump1_green = led.pump1_red = 1;
+		} else {
+			led.pump1_green = ac_state.pump1_start ? 1 : 0;
+			led.pump1_red = ac_state.pump1_stop ? 1 : 0;
+		}
+		if(ac_state.pump2_fail) {
+			led.pump2_green = led.pump2_red = 1;
+		} else {
+			led.pump2_green = ac_state.pump2_start ? 1 : 0;
+			led.pump2_red = ac_state.pump2_stop ? 1 : 0;
+		}
+		//pump3 no fail signal
+		led.pump3_green = ac_state.pump3_start ? 1 : 0;
+		led.pump3_red = ac_state.pump3_stop ? 1 : 0;
+		
+		//DC indicator leds
+		led.volt_in1 = dc_state.di_ext_in1 ? 1 : 0;
+		led.volt_in2 = dc_state.di_ext_in2 ? 1 : 0;
+		
+		hc595_write(led.val);
+    osDelay(10);
   }
   /* USER CODE END DisplayTask */
 }

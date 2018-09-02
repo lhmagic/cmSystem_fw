@@ -74,18 +74,18 @@ return:				11 channel ac on/off state
 u_ac_state get_ac_state(void) {
 static u_ac_state state;
 	
-	state.val = 0;	
+	state.val = 0;
 	state.pump1_fail = (HAL_GPIO_ReadPin(PUMP1_FAIL_GPIO_Port, PUMP1_FAIL_Pin) == GPIO_PIN_RESET) ? 1 : 0;
-	state.pump1_stop = (HAL_GPIO_ReadPin(PUMP1_STOP_GPIO_Port, PUMP3_STOP_Pin) == GPIO_PIN_RESET) ? 1 : 0;
-	state.pump1_start = (HAL_GPIO_ReadPin(PUMP1_START_GPIO_Port, PUMP3_START_Pin) == GPIO_PIN_RESET) ? 1 : 0;
+	state.pump1_stop = (HAL_GPIO_ReadPin(PUMP1_STOP_GPIO_Port, PUMP1_STOP_Pin) == GPIO_PIN_RESET) ? 1 : 0;
+	state.pump1_start = (HAL_GPIO_ReadPin(PUMP1_START_GPIO_Port, PUMP1_START_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	state.pump2_fail = (HAL_GPIO_ReadPin(PUMP2_FAIL_GPIO_Port, PUMP2_FAIL_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	state.pump2_stop = (HAL_GPIO_ReadPin(PUMP2_STOP_GPIO_Port, PUMP2_STOP_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	state.pump2_start = (HAL_GPIO_ReadPin(PUMP2_START_GPIO_Port, PUMP2_START_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	state.pump3_stop = (HAL_GPIO_ReadPin(PUMP3_STOP_GPIO_Port, PUMP3_STOP_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	state.pump3_start = (HAL_GPIO_ReadPin(PUMP3_START_GPIO_Port, PUMP3_START_Pin) == GPIO_PIN_RESET) ? 1 : 0;
-	state.di_sw1 = (HAL_GPIO_ReadPin(DI_SW1_GPIO_Port, DI_SW1_Pin) == GPIO_PIN_RESET) ? 1 : 0;
-	state.di_sw2 = (HAL_GPIO_ReadPin(DI_SW2_GPIO_Port, DI_SW2_Pin) == GPIO_PIN_RESET)  ? 1 : 0;
-	state.di_sw3 = (HAL_GPIO_ReadPin(DI_SW3_GPIO_Port, DI_SW3_Pin) == GPIO_PIN_RESET) ? 1 : 0;
+	state.ac_sw1 = (HAL_GPIO_ReadPin(DI_SW1_GPIO_Port, DI_SW1_Pin) == GPIO_PIN_RESET) ? 1 : 0;
+	state.ac_sw2 = (HAL_GPIO_ReadPin(DI_SW2_GPIO_Port, DI_SW2_Pin) == GPIO_PIN_RESET)  ? 1 : 0;
+	state.ac_sw3 = (HAL_GPIO_ReadPin(DI_SW3_GPIO_Port, DI_SW3_Pin) == GPIO_PIN_RESET) ? 1 : 0;
 	
 	return state;
 }
