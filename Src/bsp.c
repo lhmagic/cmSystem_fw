@@ -100,4 +100,19 @@ static u_dc_state state;
 	return state;
 }
 
-
+uint16_t mb_crc16(const uint8_t *buff, uint8_t len) {
+uint16_t i, j;
+uint16_t c, crc = 0xFFFF;
+		for (i = 0; i < len; i++) {
+			c = buff[i] & 0x00FF;
+			crc ^= c;
+			for (j = 0; j < 8; j++) {
+				if ((crc & 0x0001) != 0) {
+					crc >>= 1;
+					crc ^= 0xA001;
+				} else
+					crc >>= 1;
+			}
+		}
+		return (crc);
+}

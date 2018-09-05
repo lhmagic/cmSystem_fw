@@ -6,6 +6,8 @@
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
 
+#define		RS485_BUFF_MAX					32
+
 typedef union {
 	uint16_t val;
 	struct {
@@ -58,6 +60,7 @@ void hc595_write(uint16_t val);
 uint8_t get_rs485_addr(void);
 u_ac_state get_ac_state(void);
 u_dc_state get_dc_state(void);
+uint16_t mb_crc16(const uint8_t *buff, uint8_t len);
 
 #endif	// __BSP_H__
 
