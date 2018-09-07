@@ -104,7 +104,7 @@ uint16_t mb_crc16(const uint8_t *buff, uint8_t len) {
 uint16_t i, j;
 uint16_t c, crc = 0xFFFF;
 		for (i = 0; i < len; i++) {
-			c = buff[i] & 0x00FF;
+			c = buff[i];
 			crc ^= c;
 			for (j = 0; j < 8; j++) {
 				if ((crc & 0x0001) != 0) {
@@ -116,3 +116,4 @@ uint16_t c, crc = 0xFFFF;
 		}
 		return (crc);
 }
+

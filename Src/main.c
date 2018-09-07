@@ -62,6 +62,7 @@ ADC_HandleTypeDef hadc;
 DMA_HandleTypeDef hdma_adc;
 
 TIM_HandleTypeDef htim14;
+TIM_HandleTypeDef htim15;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
@@ -85,6 +86,8 @@ const char cmd_read_pres2[]		=	{0x0C,0x03,0x00,0x04,0x00,0x01,0xC4,0xD6};
 const char cmd_read_statu2[]	=	{0x02,0x03,0x00,0x00,0x00,0x01,0x84,0x39};
 const char cmd_read_pres3[]		=	{0x0D,0x03,0x00,0x04,0x00,0x01,0xC5,0x07};
 const char cmd_read_pres4[]		=	{0x0E,0x03,0x00,0x04,0x00,0x01,0xC5,0x34};
+
+uint32_t adc_buf[5];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +98,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_ADC_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM14_Init(void);
+static void MX_TIM15_Init(void);
 void StartDefaultTask(void const * argument);
 void sampleTask(void const * argument);
 void DisplayTask(void const * argument);
@@ -149,8 +153,12 @@ int main(void)
   MX_ADC_Init();
   MX_TIM16_Init();
   MX_TIM14_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
-
+	HAL_ADCEx_Calibration_Start(&hadc);
+	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
+	HAL_ADC_Start_DMA(&hadc, adc_buf, 5);	
+	
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -280,16 +288,16 @@ static void MX_ADC_Init(void)
   hadc.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc.Init.Resolution = ADC_RESOLUTION_12B;
   hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
+  hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_BACKWARD;
   hadc.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   hadc.Init.LowPowerAutoWait = DISABLE;
   hadc.Init.LowPowerAutoPowerOff = DISABLE;
-  hadc.Init.ContinuousConvMode = ENABLE;
+  hadc.Init.ContinuousConvMode = DISABLE;
   hadc.Init.DiscontinuousConvMode = DISABLE;
-  hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T15_TRGO;
+  hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc.Init.DMAContinuousRequests = ENABLE;
-  hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
   if (HAL_ADC_Init(&hadc) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -350,6 +358,59 @@ static void MX_TIM14_Init(void)
   htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM15 init function */
+static void MX_TIM15_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_OC_InitTypeDef sConfigOC;
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
+
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 48;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 1000;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_PWM_Init(&htim15) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -537,7 +598,12 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-
+	for(uint8_t i=0; i<5; i++) {
+		//printf("%d\t", adc_buf[i]);
+		(void)adc_buf[i];
+	}
+//	printf("%d", adc_buf[3]);
+	//printf("\r\n");
 }
 
 int fputc(int ch, FILE *f) {
@@ -557,7 +623,8 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   /* Infinite loop */
   for(;;)
   {
-		//printf("running.\r\n");
+		HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
     osDelayUntil(&PreviousWakeTime, 1000);
   }
   /* USER CODE END 5 */ 
@@ -592,17 +659,41 @@ uint8_t addr;
 					response_buff[1] = usart_buff[1];
 					response_buff[2] = 0x02;
 					response_buff[3] = 0;
-					response_buff[4] = (ac_state.pump1_stop<<0) | (ac_state.ac_sw1<<1) | (ac_state.pump1_fail<<2) | (ac_state.pump1_start)\
-													 | (ac_state.pump2_stop<<4) | (ac_state.ac_sw2<<5) | (ac_state.pump2_fail<<6) | (ac_state.pump2_start);
+					response_buff[4] = (ac_state.pump1_stop<<0) | (ac_state.ac_sw1<<1)\
+													 | (ac_state.pump1_fail<<2) | (ac_state.pump1_start<<3)\
+													 | (ac_state.pump2_stop<<4) | (ac_state.ac_sw2<<5) \
+													 | (ac_state.pump2_fail<<6) | (ac_state.pump2_start<<7);
 					mb_crc = mb_crc16(response_buff, 5);
 					response_buff[5] = mb_crc & 0xFF;
 					response_buff[6] = mb_crc >> 8;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);					
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres1, receive_cnt) == 0) && (addr == 1)) {
-					printf("cmd_read_pres1\r\n");
+				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*1;
+					pres = (pres < 0) ? 0 : pres;
+					response_buff[0] = usart_buff[0];
+					response_buff[1] = usart_buff[1];
+					response_buff[2] = 0x02;
+					response_buff[3] = pres>>8;
+					response_buff[4] = pres&0xFF;
+					mb_crc = mb_crc16(response_buff, 5);
+					response_buff[5] = mb_crc & 0xFF;
+					response_buff[6] = mb_crc >> 8;
+					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
+					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);	
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres2, receive_cnt) == 0) && (addr == 1)) {
-					printf("cmd_read_pres2\r\n");
+				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*1;
+					pres = (pres < 0) ? 0 : pres;
+					response_buff[0] = usart_buff[0];
+					response_buff[1] = usart_buff[1];
+					response_buff[2] = 0x02;
+					response_buff[3] = pres>>8;
+					response_buff[4] = pres&0xFF;
+					mb_crc = mb_crc16(response_buff, 5);
+					response_buff[5] = mb_crc & 0xFF;
+					response_buff[6] = mb_crc >> 8;
+					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
+					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);	
 				} else if((strncmp((const char *)usart_buff, cmd_read_statu2, receive_cnt) == 0) && (addr == 2)) {
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -616,9 +707,31 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres3, receive_cnt) == 0) && (addr == 2)) {
-					printf("cmd_read_pres3\r\n");
+				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*1;
+					pres = (pres < 0) ? 0 : pres;
+					response_buff[0] = usart_buff[0];
+					response_buff[1] = usart_buff[1];
+					response_buff[2] = 0x02;
+					response_buff[3] = pres>>8;
+					response_buff[4] = pres&0xFF;
+					mb_crc = mb_crc16(response_buff, 5);
+					response_buff[5] = mb_crc & 0xFF;
+					response_buff[6] = mb_crc >> 8;
+					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
+					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres4, receive_cnt) == 0) && (addr == 2)) {
-					printf("cmd_read_pres4\r\n");
+				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*1;
+					pres = (pres < 0) ? 0 : pres;
+					response_buff[0] = usart_buff[0];
+					response_buff[1] = usart_buff[1];
+					response_buff[2] = 0x02;
+					response_buff[3] = pres>>8;
+					response_buff[4] = pres&0xFF;
+					mb_crc = mb_crc16(response_buff, 5);
+					response_buff[5] = mb_crc & 0xFF;
+					response_buff[6] = mb_crc >> 8;
+					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
+					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);
 				} else if(((addr==1)&&((usart_buff[0]==1)||(usart_buff[0]==0x0b)||(usart_buff[0]==0x0c)))\
 							|| ((addr==2)&&((usart_buff[0]==2)||(usart_buff[0]==0x0d)||(usart_buff[0]==0x0e)))){
 					response_buff[0] = usart_buff[0];

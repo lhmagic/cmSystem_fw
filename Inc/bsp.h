@@ -13,12 +13,12 @@ typedef union {
 	struct {
 		uint8_t sys_err			: 1;	
 		uint8_t pump_pwr		: 1;
-		uint8_t pump3_red		: 1;
-		uint8_t pump3_green	: 1;
-		uint8_t pump2_red		: 1;
-		uint8_t pump2_green	: 1;
 		uint8_t pump1_red		: 1;
 		uint8_t pump1_green	: 1;
+		uint8_t pump2_red		: 1;
+		uint8_t pump2_green	: 1;
+		uint8_t pump3_red		: 1;
+		uint8_t pump3_green	: 1;
 		uint8_t volt_in1		: 1;
 		uint8_t volt_in2		: 1;
 		uint8_t curr_in1		: 1;

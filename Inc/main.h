@@ -54,9 +54,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 /* USER CODE BEGIN Includes */
-typedef struct {
-	
-} t_mb_regs;
+
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
