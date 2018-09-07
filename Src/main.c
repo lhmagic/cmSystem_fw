@@ -307,7 +307,7 @@ static void MX_ADC_Init(void)
     */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-  sConfig.SamplingTime = ADC_SAMPLETIME_71CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -602,8 +602,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 		//printf("%d\t", adc_buf[i]);
 		(void)adc_buf[i];
 	}
-//	printf("%d", adc_buf[3]);
-	//printf("\r\n");
+//	printf("%d\t", (uint16_t)((adc_buf[3]*3300/4095)));
+//	printf("%d", (uint16_t)((adc_buf[3]*3300/4095*0.625-250)*2.5));
+//	printf("\r\n");
 }
 
 int fputc(int ch, FILE *f) {
@@ -669,7 +670,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);					
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres1, receive_cnt) == 0) && (addr == 1)) {
-				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*1;
+				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*2.5;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -682,7 +683,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);	
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres2, receive_cnt) == 0) && (addr == 1)) {
-				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*1;
+				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*2.5;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
