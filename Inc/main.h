@@ -109,10 +109,10 @@
 #define LED_SH_GPIO_Port GPIOA
 #define USART_DE_Pin GPIO_PIN_12
 #define USART_DE_GPIO_Port GPIOA
-#define DI_EXT_IN1_Pin GPIO_PIN_6
-#define DI_EXT_IN1_GPIO_Port GPIOF
-#define DI_EXT_IN2_Pin GPIO_PIN_7
+#define DI_EXT_IN2_Pin GPIO_PIN_6
 #define DI_EXT_IN2_GPIO_Port GPIOF
+#define DI_EXT_IN1_Pin GPIO_PIN_7
+#define DI_EXT_IN1_GPIO_Port GPIOF
 #define RS485_TX_LED_Pin GPIO_PIN_4
 #define RS485_TX_LED_GPIO_Port GPIOB
 #define RS485_RX_LED_Pin GPIO_PIN_5

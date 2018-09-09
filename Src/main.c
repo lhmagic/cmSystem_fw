@@ -87,7 +87,9 @@ const char cmd_read_statu2[]	=	{0x02,0x03,0x00,0x00,0x00,0x01,0x84,0x39};
 const char cmd_read_pres3[]		=	{0x0D,0x03,0x00,0x04,0x00,0x01,0xC5,0x07};
 const char cmd_read_pres4[]		=	{0x0E,0x03,0x00,0x04,0x00,0x01,0xC5,0x34};
 
+s_sys_para *sys_para;
 uint32_t adc_buf[5];
+int32_t avg_vref, avg_ac, avg_v1650, avg_cs1, avg_cs2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -136,7 +138,13 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	
+	sys_para = (s_sys_para *)parama_save_addr;
+	if((sys_para->pres_k <=0) || (sys_para->pres_k >=5)) {
+		sys_para->pres_k = 1;
+	}
+	if(sys_para->pres_b >= 1) {
+		sys_para->pres_b = 0;
+	}	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -159,6 +167,9 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 	HAL_ADC_Start_DMA(&hadc, adc_buf, 5);	
 	
+	HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+	HAL_Delay(200);
+	HAL_TIM_PWM_Stop(&htim16, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -307,7 +318,7 @@ static void MX_ADC_Init(void)
     */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-  sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_71CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -373,7 +384,7 @@ static void MX_TIM15_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
 
   htim15.Instance = TIM15;
-  htim15.Init.Prescaler = 48;
+  htim15.Init.Prescaler = 15;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim15.Init.Period = 1000;
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -476,7 +487,7 @@ static void MX_USART1_UART_Init(void)
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.StopBits = UART_STOPBITS_2;
   huart1.Init.Parity = UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
@@ -563,8 +574,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DI_EXT_IN1_Pin DI_EXT_IN2_Pin */
-  GPIO_InitStruct.Pin = DI_EXT_IN1_Pin|DI_EXT_IN2_Pin;
+  /*Configure GPIO pins : DI_EXT_IN2_Pin DI_EXT_IN1_Pin */
+  GPIO_InitStruct.Pin = DI_EXT_IN2_Pin|DI_EXT_IN1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
@@ -597,14 +608,73 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+uint16_t get_ac220(void) {
+	return (uint16_t)(avg_ac*3300.0*221/(4095*1.414*8.5*50));
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	for(uint8_t i=0; i<5; i++) {
-		//printf("%d\t", adc_buf[i]);
-		(void)adc_buf[i];
+static int32_t sum_vref, sum_ac, sum_v1650, sum_cs1, sum_cs2;	
+static int16_t vref[FILTER_BUFF_SIZE], ac[FILTER_BUFF_SIZE];
+static int16_t v1650[FILTER_BUFF_SIZE], cs1[FILTER_BUFF_SIZE], cs2[FILTER_BUFF_SIZE];
+static int8_t index;
+static int16_t ac_max, ac_temp;
+	
+	sum_vref -= vref[index]; 
+	vref[index] = adc_buf[0];
+	sum_vref += vref[index];
+
+	sum_v1650 -= v1650[index]; 
+	v1650[index] = adc_buf[2];
+	sum_v1650 += v1650[index];			
+
+	sum_cs1 -= cs1[index]; 
+	cs1[index] = adc_buf[3];
+	sum_cs1 += cs1[index];			
+
+	sum_cs2 -= cs2[index]; 
+	cs2[index] = adc_buf[4];
+	sum_cs2 += cs2[index];			
+
+	ac_temp = adc_buf[1]-2060;
+	if(ac_temp > 0) {
+		if(ac_max < ac_temp) {
+			ac_max = ac_temp;
+		}
+	}	else if(ac_temp < 0) {
+		if(ac_max < -ac_temp) {
+			ac_max = -ac_temp;
+		}
 	}
-//	printf("%d\t", (uint16_t)((adc_buf[3]*3300/4095)));
-//	printf("%d", (uint16_t)((adc_buf[3]*3300/4095*0.625-250)*2.5));
-//	printf("\r\n");
+
+	if(++index >= FILTER_BUFF_SIZE) {
+	static uint8_t ac_index;
+		
+		index = 0;
+		sum_ac -= ac[ac_index]; 
+		ac[ac_index] = ac_max;
+		sum_ac += ac[ac_index];
+		ac_max = 0;
+		
+		if(++ac_index >= FILTER_BUFF_SIZE) {
+			ac_index = 0;
+		}
+	}
+
+	avg_vref = sum_vref/FILTER_BUFF_SIZE;
+	avg_ac = sum_ac/FILTER_BUFF_SIZE;
+	avg_v1650 = sum_v1650/FILTER_BUFF_SIZE;
+	avg_cs1 = sum_cs1/FILTER_BUFF_SIZE;
+	avg_cs2 = sum_cs2/FILTER_BUFF_SIZE;
+
+	//if voltage greater than 3v, power off output.
+	if(avg_cs1 >= 3722) {
+		HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_RESET);
+	}
+
+	//if voltage greater than 3v, power off output.
+	if(avg_cs2 >= 3722) {
+		HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_RESET);
+	}		
 }
 
 int fputc(int ch, FILE *f) {
@@ -626,6 +696,7 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   {
 		HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+		
     osDelayUntil(&PreviousWakeTime, 1000);
   }
   /* USER CODE END 5 */ 
@@ -651,7 +722,6 @@ uint8_t addr;
 			HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port, RS485_RX_LED_Pin, GPIO_PIN_RESET);
 			receive_cnt = RS485_BUFF_MAX-huart1.RxXferCount; 
 			HAL_UART_AbortReceive_IT(&huart1);
-			
 			addr = get_rs485_addr();
 			
 			if(receive_cnt == 8) {
@@ -670,7 +740,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);					
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres1, receive_cnt) == 0) && (addr == 1)) {
-				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*2.5;
+				int16_t pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para->pres_k)+sys_para->pres_b;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -683,7 +753,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);	
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres2, receive_cnt) == 0) && (addr == 1)) {
-				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*2.5;
+				int16_t pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para->pres_k)+sys_para->pres_b;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -708,7 +778,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres3, receive_cnt) == 0) && (addr == 2)) {
-				int16_t pres = (adc_buf[3]*3300/4095*0.625-250)*1;
+				int16_t pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para->pres_k)+sys_para->pres_b;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -721,7 +791,7 @@ uint8_t addr;
 					HAL_UART_Transmit_IT(&huart1, response_buff, 7);	
 					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port, RS485_TX_LED_Pin, GPIO_PIN_RESET);
 				} else if((strncmp((const char *)usart_buff, cmd_read_pres4, receive_cnt) == 0) && (addr == 2)) {
-				int16_t pres = (adc_buf[4]*3300/4095*0.625-250)*1;
+				int16_t pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para->pres_k)+sys_para->pres_b;
 					pres = (pres < 0) ? 0 : pres;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
@@ -759,7 +829,7 @@ uint8_t addr;
 void DisplayTask(void const * argument)
 {
   /* USER CODE BEGIN DisplayTask */
-u_led led;
+volatile u_led led;
 uint32_t PreviousWakeTime = osKernelSysTick();	
 
 	led = hc595_init();
@@ -768,9 +838,19 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   for(;;)
   {
 		ac_state = get_ac_state();
+		//AC voltage 220V with 20% offset
+		if((avg_ac>=594) && (avg_ac<=891)) {
+			ac_state.ac_pwr = 1;
+		}
 		dc_state = get_dc_state();
 		led.val = 0;
 		//AC indicator leds
+		
+		if(ac_state.ac_pwr) {
+			led.pump_pwr = 1;
+		} else {
+			led.pump_pwr = 0;
+		}
 		
 		if(ac_state.pump1_fail) {
 			led.pump1_green = led.pump1_red = 1;
@@ -791,6 +871,18 @@ uint32_t PreviousWakeTime = osKernelSysTick();
 		//DC indicator leds
 		led.volt_in1 = dc_state.di_ext_in1 ? 1 : 0;
 		led.volt_in2 = dc_state.di_ext_in2 ? 1 : 0;
+		
+		//led on when current between 4~20mA.
+		if((avg_cs1>=496)&&(avg_cs1<=2482)) {
+			led.curr_in1 = 1;
+		} else {
+			led.curr_in1 = 0;
+		}
+		if((avg_cs2>=496)&&(avg_cs2<=2482)) {
+			led.curr_in2 = 1;
+		} else {
+			led.curr_in2 = 0;
+		}
 		
 		hc595_write(led.val);
     osDelayUntil(&PreviousWakeTime, 100);

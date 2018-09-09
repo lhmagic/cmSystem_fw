@@ -6,7 +6,16 @@
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
 
+#define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
+#define		FILTER_BUFF_SIZE				32
+
+#define		parama_save_addr				0xFF00
+
+typedef	struct {
+	float pres_k;
+	float pres_b;
+} s_sys_para;
 
 typedef union {
 	uint16_t val;
@@ -19,10 +28,10 @@ typedef union {
 		uint8_t pump2_green	: 1;
 		uint8_t pump3_red		: 1;
 		uint8_t pump3_green	: 1;
-		uint8_t volt_in1		: 1;
 		uint8_t volt_in2		: 1;
-		uint8_t curr_in1		: 1;
+		uint8_t volt_in1		: 1;
 		uint8_t curr_in2		: 1;
+		uint8_t curr_in1		: 1;
 		uint8_t 						: 4;
 	};
 } u_led;
