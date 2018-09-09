@@ -6,6 +6,9 @@
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
 
+#define		HW_VER									"RevA.0"
+#define		FW_VER									"Rev1.1.0"
+
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
 #define		FILTER_BUFF_SIZE				32
@@ -13,8 +16,12 @@
 #define		parama_save_addr				0xFF00
 
 typedef	struct {
-	float pres_k;
-	float pres_b;
+	int16_t pres_k;
+	int16_t pres_b;
+	int16_t pres1_max;
+	int16_t pres1_min;
+	int16_t pres2_max;
+	int16_t pres2_min;	
 } s_sys_para;
 
 typedef union {
@@ -70,6 +77,9 @@ uint8_t get_rs485_addr(void);
 u_ac_state get_ac_state(void);
 u_dc_state get_dc_state(void);
 uint16_t mb_crc16(const uint8_t *buff, uint8_t len);
+
+void flash_write(uint32_t addr, uint8_t *data, uint16_t len) ;
+void set_rop(void);
 
 #endif	// __BSP_H__
 
