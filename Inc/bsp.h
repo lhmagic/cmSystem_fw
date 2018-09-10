@@ -6,8 +6,8 @@
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
 
-#define		HW_VER									"RevA.0"
-#define		FW_VER									"Rev1.1.0"
+#define		HW_VER									"A.0"
+#define		FW_VER									"1.1.0"
 
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32

@@ -45,6 +45,7 @@ extern uint8_t debug_rx_cplt;
 extern DMA_HandleTypeDef hdma_adc;
 extern TIM_HandleTypeDef htim14;
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 
 extern TIM_HandleTypeDef htim6;
 
@@ -160,9 +161,25 @@ void USART1_IRQHandler(void)
 	if(READ_REG(huart1.Instance->ISR) & USART_ISR_IDLE) {
 		SET_BIT(huart1.Instance->ICR, USART_ICR_IDLECF);
 		usart_rx_cplt = 1;
-		debug_rx_cplt = 1;
 	}
   /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
+* @brief This function handles USART2 global interrupt.
+*/
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+	if(READ_REG(huart2.Instance->ISR) & USART_ISR_IDLE) {
+		SET_BIT(huart2.Instance->ICR, USART_ICR_IDLECF);
+		debug_rx_cplt = 1;
+	}
+  /* USER CODE END USART2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
