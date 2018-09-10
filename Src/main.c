@@ -68,7 +68,6 @@ TIM_HandleTypeDef htim15;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart2;
 
 osThreadId defaultTaskHandle;
 uint32_t defaultTaskBuffer[ 64 ];
@@ -93,7 +92,7 @@ const char cmd_read_statu2[]	=	{0x02,0x03,0x00,0x00,0x00,0x01,0x84,0x39};
 const char cmd_read_pres3[]		=	{0x0D,0x03,0x00,0x04,0x00,0x01,0xC5,0x07};
 const char cmd_read_pres4[]		=	{0x0E,0x03,0x00,0x04,0x00,0x01,0xC5,0x34};
 
-s_sys_para *sys_para;
+s_sys_para sys_para;
 uint32_t adc_buf[5];
 int32_t avg_vref, avg_ac, avg_v1650, avg_cs1, avg_cs2;
 /* USER CODE END PV */
@@ -107,7 +106,6 @@ static void MX_ADC_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM14_Init(void);
 static void MX_TIM15_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_IWDG_Init(void);
 void StartDefaultTask(void const * argument);
 void sampleTask(void const * argument);
@@ -149,13 +147,16 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	sys_para = (s_sys_para *)parama_save_addr;
-	if((sys_para->pres_k <=0) || (sys_para->pres_k >=5000)) {
-		sys_para->pres_k = 1000;
+	memcpy(&sys_para, (void *)parama_save_addr, sizeof(s_sys_para));
+	if((sys_para.pres_k <=0) || (sys_para.pres_k >=5000)) {
+		sys_para.pres_k = 1000;
 	}
-	if(sys_para->pres_b >= 1000) {
-		sys_para->pres_b = 0;
+	if(sys_para.pres_b >= 1000) {
+		sys_para.pres_b = 0;
 	}	
+	
+	sys_para.pres_k = 2500;
+	sys_para.pres_b = 0;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -173,7 +174,6 @@ int main(void)
   MX_TIM16_Init();
   MX_TIM14_Init();
   MX_TIM15_Init();
-  MX_USART2_UART_Init();
   MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 	HAL_ADCEx_Calibration_Start(&hadc);
@@ -204,8 +204,8 @@ int main(void)
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of regularSample */
-  osThreadStaticDef(regularSample, sampleTask, osPriorityNormal, 0, 64, regularSampleBuffer, &regularSampleControlBlock);
-  regularSampleHandle = osThreadCreate(osThread(regularSample), NULL);
+//  osThreadStaticDef(regularSample, sampleTask, osPriorityNormal, 0, 64, regularSampleBuffer, &regularSampleControlBlock);
+//  regularSampleHandle = osThreadCreate(osThread(regularSample), NULL);
 
   /* definition and creation of LedDisplay */
   osThreadStaticDef(LedDisplay, DisplayTask, osPriorityBelowNormal, 0, 64, LedDisplayBuffer, &LedDisplayControlBlock);
@@ -536,27 +536,6 @@ static void MX_USART1_UART_Init(void)
 
 }
 
-/* USART2 init function */
-static void MX_USART2_UART_Init(void)
-{
-
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
 /** 
   * Enable DMA controller clock
   */
@@ -630,17 +609,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /*Configure GPIO pins : DI_EXT_IN2_Pin DI_EXT_IN1_Pin */
   GPIO_InitStruct.Pin = DI_EXT_IN2_Pin|DI_EXT_IN1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB3 */
   GPIO_InitStruct.Pin = GPIO_PIN_3;
@@ -671,10 +650,18 @@ uint16_t get_ac220(void) {
 int16_t get_pres(uint8_t num) {
 int16_t pres=0;	
 	if(num == 1) {
-		pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para->pres_k/1000.0)+sys_para->pres_b/1000.0;
+		if(avg_cs1 == 0) {
+			return 0;
+		} else {
+			pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b/1000.0;
+		}
 	} else if(num==2) {
-		pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para->pres_k/1000.0)+sys_para->pres_b/1000.0;
-	}	
+		if(avg_cs2 == 0) {
+			return 0;
+		} else {		
+			pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b/1000.0;
+		}
+	}
 	return pres;
 }
 
@@ -746,7 +733,7 @@ static int16_t ac_max, ac_temp;
 int fputc(int ch, FILE *f) {
 uint8_t c;
 	c = ch;
-	HAL_UART_Transmit(&huart2, &c, 1, 1);
+	HAL_UART_Transmit(&huart1, &c, 1, 1);
 	return ch;
 }
 /* USER CODE END 4 */
@@ -952,8 +939,8 @@ uint32_t PreviousWakeTime = osKernelSysTick();
 		}
 		
 		//
-		if((get_pres(1) < sys_para->pres1_min) || (get_pres(1) > sys_para->pres1_max) || \
-			 (get_pres(2) < sys_para->pres2_min) || (get_pres(2) > sys_para->pres2_max)) {
+		if((get_pres(1) < sys_para.pres1_min) || (get_pres(1) > sys_para.pres1_max) || \
+			 (get_pres(2) < sys_para.pres2_min) || (get_pres(2) > sys_para.pres2_max)) {
 			led.sys_err = 1;
 		} else {
 			led.sys_err = 0;
@@ -974,29 +961,32 @@ uint32_t PageError;
 uint32_t PreviousWakeTime = osKernelSysTick();	
 uint8_t receive_cnt, response_buff[32];
 	
-	HAL_UART_Receive_IT(&huart2, debug_buff, DEBUG_BUFF_MAX);
-	SET_BIT(huart2.Instance->ICR, USART_ICR_IDLECF);
-  SET_BIT(huart2.Instance->CR1, USART_CR1_IDLEIE);
+	HAL_UART_Receive_IT(&huart1, debug_buff, DEBUG_BUFF_MAX);
+	SET_BIT(huart1.Instance->ICR, USART_ICR_IDLECF);
+  SET_BIT(huart1.Instance->CR1, USART_CR1_IDLEIE);
 	
   /* Infinite loop */
   for(;;)
   {
 		if(debug_rx_cplt) {
-			receive_cnt = DEBUG_BUFF_MAX-huart2.RxXferCount; 
-			HAL_UART_AbortReceive_IT(&huart2);
+			receive_cnt = DEBUG_BUFF_MAX-huart1.RxXferCount; 
+			HAL_UART_AbortReceive_IT(&huart1);
 			
 			if(receive_cnt == 16) {
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
 					case 'B':
-						sprintf((char *)response_buff, "B%s %s", HW_VER, FW_VER);
-						HAL_UART_Transmit_IT(&huart2, response_buff, 16);
+						sprintf((char *)response_buff, "B%s %s %d %d %d\r\n", HW_VER, FW_VER, avg_ac, \
+										get_pres(1), get_pres(2));
+						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
+						HAL_UART_Transmit_IT(&huart1, response_buff, 32);
 						break;
 					case 'R':
 						response_buff[0] = 'R';
-						strncpy((char *)(response_buff+1), (const char *)sys_para, sizeof(s_sys_para));
-						HAL_UART_Transmit_IT(&huart2, response_buff, 16);
+						strncpy((char *)(response_buff+1), (const char *)&sys_para, sizeof(s_sys_para));
+						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+						HAL_UART_Transmit_IT(&huart1, response_buff, 16);						
 						break;
 					case 'W':
 						response_buff[0] = 'W';
@@ -1005,10 +995,11 @@ uint8_t receive_cnt, response_buff[32];
 						EraseInitStruct.PageAddress = parama_save_addr;
 						EraseInitStruct.NbPages = 1;
 						HAL_FLASHEx_Erase(&EraseInitStruct, &PageError);
-						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr, (uint64_t)sys_para);
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr, (uint64_t)&sys_para);
 						HAL_FLASH_Lock();
-						HAL_UART_Transmit_IT(&huart2, response_buff, 16);
+						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+						HAL_UART_Transmit_IT(&huart1, response_buff, 16);						
 						break;
 					default:
 						break;
@@ -1016,10 +1007,11 @@ uint8_t receive_cnt, response_buff[32];
 			}
 			
 			debug_rx_cplt = 0;
-			HAL_UART_Receive_IT(&huart2, debug_buff, DEBUG_BUFF_MAX);
+			HAL_UART_Receive_IT(&huart1, debug_buff, DEBUG_BUFF_MAX);
 		}
     osDelayUntil(&PreviousWakeTime, 100);
 		HAL_TIM_PWM_Stop(&htim16, TIM_CHANNEL_1);
+		HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_SET);
   }
   /* USER CODE END configTask */
