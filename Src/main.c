@@ -1000,7 +1000,7 @@ uint8_t receive_cnt, response_buff[32];
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
 					case 'B':
-						sprintf((char *)response_buff, "B %s %s %d %d %d %d %d\r\n", HW_VER, FW_VER, get_ac220(), \
+						sprintf((char *)response_buff, "B %s %s %d %d %d %d %d ", HW_VER, FW_VER, get_ac220(), \
 										get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_UART_Transmit_IT(&huart2, response_buff, 32);
