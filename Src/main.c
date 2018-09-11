@@ -677,13 +677,13 @@ int16_t pres=0;
 		if(avg_cs1 == 0) {
 			return 0;
 		} else {
-			pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b/1000.0;
+			pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b;
 		}
 	} else if(num==2) {
 		if(avg_cs2 == 0) {
 			return 0;
 		} else {		
-			pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b/1000.0;
+			pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b;
 		}
 	}
 	return pres;
