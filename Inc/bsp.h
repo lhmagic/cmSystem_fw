@@ -7,7 +7,7 @@
 #include "cmsis_os.h"
 
 #define		HW_VER									"A.0"
-#define		FW_VER									"1.1.0"
+#define		FW_VER									"1.1.2"
 
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
@@ -16,10 +16,12 @@
 #define		parama_save_addr				0xFF00
 
 typedef	struct {
-	int16_t pres_k;
-	int16_t pres_b;
+	int16_t pres1_k;
+	int16_t pres1_b;
 	int16_t pres1_max;
 	int16_t pres1_min;
+	int16_t pres2_k;
+	int16_t pres2_b;	
 	int16_t pres2_max;
 	int16_t pres2_min;	
 } s_sys_para;

@@ -150,15 +150,20 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 	memcpy(&sys_para, (void *)parama_save_addr, sizeof(s_sys_para));
-	if((sys_para.pres_k <=0) || (sys_para.pres_k >=5000)) {
-		sys_para.pres_k = 1000;
+	if((sys_para.pres1_k <=0) || (sys_para.pres1_k >=5000)) {
+		sys_para.pres1_k = 1000;
 	}
-	if(sys_para.pres_b >= 1000) {
-		sys_para.pres_b = 0;
+	if(sys_para.pres1_b >= 1000) {
+		sys_para.pres1_b = 0;
 	}	
 	
-	sys_para.pres_k = 2500;
-	sys_para.pres_b = 0;
+	if((sys_para.pres2_k <=0) || (sys_para.pres2_k >=5000)) {
+		sys_para.pres1_k = 1000;
+	}
+	if(sys_para.pres2_b >= 1000) {
+		sys_para.pres2_b = 0;
+	}		
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -677,13 +682,13 @@ int16_t pres=0;
 		if(avg_cs1 == 0) {
 			return 0;
 		} else {
-			pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b;
+			pres = ((3300.0*avg_cs1)/(4095.0)*0.625-250)*(sys_para.pres1_k/1000.0)+sys_para.pres1_b;
 		}
 	} else if(num==2) {
 		if(avg_cs2 == 0) {
 			return 0;
 		} else {		
-			pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para.pres_k/1000.0)+sys_para.pres_b;
+			pres = ((3300.0*avg_cs2)/(4095.0)*0.625-250)*(sys_para.pres2_k/1000.0)+sys_para.pres2_b;
 		}
 	}
 	return pres;
@@ -996,27 +1001,27 @@ uint8_t receive_cnt, response_buff[32];
 			receive_cnt = DEBUG_BUFF_MAX-huart2.RxXferCount; 
 			HAL_UART_AbortReceive_IT(&huart2);
 			
-			if(receive_cnt == 16) {
+			if(receive_cnt == 32) {
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
 					case 'B':
-						sprintf((char *)response_buff, "B %s %s %d %d %d %d %d ", HW_VER, FW_VER, get_ac220(), \
+						memset(response_buff, 0, 32);
+						sprintf((char *)response_buff, "B %s %s %03d %04d %04d %05d %03d ", HW_VER, FW_VER, get_ac220(), \
 										get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_UART_Transmit_IT(&huart2, response_buff, 32);
 						break;
 					case 'R':
+						memset(response_buff, 0, 32);
 						response_buff[0] = 'R';
 						memcpy(response_buff+1, &sys_para, sizeof(s_sys_para));
-						response_buff[sizeof(s_sys_para)+1] = '\r';
-						response_buff[sizeof(s_sys_para)+2] = '\n';
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
-						HAL_UART_Transmit_IT(&huart2, response_buff, 16);						
+						HAL_UART_Transmit_IT(&huart2, response_buff, 32);						
 						break;
 					case 'W':
+						memset(response_buff, 0, 32);
 						response_buff[0] = 'W';
-						memset(response_buff+1, 0, 15);
 						HAL_FLASH_Unlock();
 						EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
 						EraseInitStruct.PageAddress = parama_save_addr;
@@ -1024,11 +1029,11 @@ uint8_t receive_cnt, response_buff[32];
 						HAL_FLASHEx_Erase(&EraseInitStruct, &PageError);
 					  memcpy(&sys_para, debug_buff+1, sizeof(s_sys_para));
 						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr, *(uint64_t *)&sys_para);
-						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, parama_save_addr+8, *((uint64_t *)&sys_para+1));
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr+8, *((uint64_t *)&sys_para+1));
 						HAL_FLASH_Lock();
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
-						HAL_UART_Transmit_IT(&huart2, response_buff, 16);						
+						HAL_UART_Transmit_IT(&huart2, response_buff, 32);						
 						break;
 					default:
 						break;
