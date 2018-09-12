@@ -127,6 +127,7 @@ uint8_t usart_buff[RS485_BUFF_MAX];
 uint8_t usart_rx_cplt;
 uint8_t debug_buff[DEBUG_BUFF_MAX];
 uint8_t debug_rx_cplt;
+uint8_t response_buff[64];
 
 u_ac_state ac_state;	
 u_dc_state dc_state;
@@ -988,7 +989,7 @@ void configTask(void const * argument)
 FLASH_EraseInitTypeDef EraseInitStruct;	
 uint32_t PageError;
 uint32_t PreviousWakeTime = osKernelSysTick();	
-uint8_t receive_cnt, response_buff[32];
+uint8_t receive_cnt;
 	
 	HAL_UART_Receive_IT(&huart2, debug_buff, DEBUG_BUFF_MAX);
 	SET_BIT(huart2.Instance->ICR, USART_ICR_IDLECF);
@@ -1005,11 +1006,11 @@ uint8_t receive_cnt, response_buff[32];
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
 					case 'B':
-						memset(response_buff, 0, 32);
-						sprintf((char *)response_buff, "B %s %s %03d %04d %04d %05d %03d ", HW_VER, FW_VER, get_ac220(), \
+						memset(response_buff, 0, 40);
+						sprintf((char *)response_buff, "B %s %s %03d %04d %04d %04d %02d ", HW_VER, FW_VER, get_ac220(), \
 										get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
-						HAL_UART_Transmit_IT(&huart2, response_buff, 32);
+						HAL_UART_Transmit_IT(&huart2, response_buff, 40);
 						break;
 					case 'R':
 						memset(response_buff, 0, 32);
