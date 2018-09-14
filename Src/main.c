@@ -778,7 +778,9 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   for(;;)
   {
 		HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+		if(get_rs485_addr() == 1) {
+			HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+		}
 		
 		HAL_IWDG_Refresh(&hiwdg);
     osDelayUntil(&PreviousWakeTime, 1000);
