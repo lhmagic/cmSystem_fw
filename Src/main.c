@@ -674,7 +674,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 uint16_t get_ac220(void) {
-	return (uint16_t)(avg_ac*3300.0*221/(4095*1.414*8.5*50));
+	return (uint16_t)(avg_ac*3300.0*221/(4095*1.414*8.985*50));
 }
 
 int16_t get_pres(uint8_t num) {
@@ -777,8 +777,10 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   /* Infinite loop */
   for(;;)
   {
-		HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
-		if(get_rs485_addr() == 1) {
+		if(sys_para.cs1_switch != 0) {
+			HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
+		}
+		if(sys_para.cs2_switch != 0) {
 			HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
 		}
 		
@@ -1033,6 +1035,7 @@ uint8_t receive_cnt;
 					  memcpy(&sys_para, debug_buff+1, sizeof(s_sys_para));
 						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr, *(uint64_t *)&sys_para);
 						HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, parama_save_addr+8, *((uint64_t *)&sys_para+1));
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, parama_save_addr+16, *(uint16_t *)(&sys_para+16));
 						HAL_FLASH_Lock();
 						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
 						HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
