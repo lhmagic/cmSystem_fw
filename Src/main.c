@@ -1001,6 +1001,9 @@ uint8_t receive_cnt;
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
 					case 'B':
+						if(debug_buff[31] != 'B') {
+							break;
+						}
 						memset(response_buff, 0, 40);
 						sprintf((char *)response_buff, "B %s %s %03d %04d %04d %04d %02d ", HW_VER, FW_VER, get_ac220(), \
 										get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
@@ -1008,6 +1011,9 @@ uint8_t receive_cnt;
 						HAL_UART_Transmit_IT(&huart2, response_buff, 40);
 						break;
 					case 'R':
+						if(debug_buff[31] != 'R') {
+							break;
+						}						
 						memset(response_buff, 0, 32);
 						response_buff[0] = 'R';
 						memcpy(response_buff+1, &sys_para, sizeof(s_sys_para));
@@ -1016,6 +1022,9 @@ uint8_t receive_cnt;
 						HAL_UART_Transmit_IT(&huart2, response_buff, 32);						
 						break;
 					case 'W':
+						if(debug_buff[31] != 'W') {
+							break;
+						}						
 						memset(response_buff, 0, 32);
 						response_buff[0] = 'W';
 						HAL_FLASH_Unlock();

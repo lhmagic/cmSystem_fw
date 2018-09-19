@@ -8,7 +8,7 @@
 #include "math.h"
 
 #define		HW_VER									"A.0"
-#define		FW_VER									"1.2.4"
+#define		FW_VER									"1.2.5"
 
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
