@@ -674,7 +674,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 uint16_t get_ac220(void) {
-	return (uint16_t)(avg_ac*3300.0*221/(4095*1.414*8.985*50));
+	return (uint16_t)(avg_ac*3300.0*221/(4095*8.985*50));
 }
 
 int16_t get_pres(uint8_t num) {
@@ -700,7 +700,7 @@ static int32_t sum_vref, sum_ac, sum_v1650, sum_cs1, sum_cs2;
 static int16_t vref[FILTER_BUFF_SIZE], ac[FILTER_BUFF_SIZE];
 static int16_t v1650[FILTER_BUFF_SIZE], cs1[FILTER_BUFF_SIZE], cs2[FILTER_BUFF_SIZE];
 static int8_t index;
-static int16_t ac_max, ac_temp;
+static int32_t ac_temp;
 	
 	sum_vref -= vref[index]; 
 	vref[index] = adc_buf[0];
@@ -718,25 +718,16 @@ static int16_t ac_max, ac_temp;
 	cs2[index] = adc_buf[4];
 	sum_cs2 += cs2[index];			
 
-	ac_temp = adc_buf[1]-2060;
-	if(ac_temp > 0) {
-		if(ac_max < ac_temp) {
-			ac_max = ac_temp;
-		}
-	}	else if(ac_temp < 0) {
-		if(ac_max < -ac_temp) {
-			ac_max = -ac_temp;
-		}
-	}
+	ac_temp += (adc_buf[1]-2060)*(adc_buf[1]-2060);	
 
 	if(++index >= FILTER_BUFF_SIZE) {
 	static uint8_t ac_index;
 		
 		index = 0;
 		sum_ac -= ac[ac_index]; 
-		ac[ac_index] = ac_max;
+		ac[ac_index] = sqrt(ac_temp/32);
 		sum_ac += ac[ac_index];
-		ac_max = 0;
+		ac_temp = 0;
 		
 		if(++ac_index >= FILTER_BUFF_SIZE) {
 			ac_index = 0;

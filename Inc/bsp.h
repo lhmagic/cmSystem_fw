@@ -5,9 +5,10 @@
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include "cmsis_os.h"
+#include "math.h"
 
 #define		HW_VER									"A.0"
-#define		FW_VER									"1.2.3"
+#define		FW_VER									"1.2.4"
 
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
