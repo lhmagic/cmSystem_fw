@@ -857,9 +857,9 @@ uint8_t addr;
 					response_buff[0] = usart_buff[0];
 					response_buff[1] = usart_buff[1];
 					response_buff[2] = 0x02;
-					response_buff[3] = (ac_state.pump1_stop<<0) | (ac_state.ac_sw1<<1) | (ac_state.pump1_fail<<2) | (ac_state.pump1_start)\
+					response_buff[3] = 0;
+					response_buff[4] = (ac_state.pump1_stop<<0) | (ac_state.ac_sw1<<1) | (ac_state.pump1_fail<<2) | (ac_state.pump1_start)\
 													 | (ac_state.pump2_stop<<4) | (ac_state.ac_sw2<<5) | (ac_state.pump2_fail<<6) | (ac_state.pump2_start);
-					response_buff[4] = 0;
 					mb_crc = mb_crc16(response_buff, 5);
 					response_buff[5] = mb_crc & 0xFF;
 					response_buff[6] = mb_crc >> 8;
