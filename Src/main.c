@@ -997,19 +997,17 @@ uint8_t receive_cnt;
 			receive_cnt = DEBUG_BUFF_MAX-huart2.RxXferCount; 
 			HAL_UART_AbortReceive_IT(&huart2);
 			
+			if((receive_cnt == 6) && (strncmp((const char *)debug_buff, "BEACON", 6) == 0)) {
+					memset(response_buff, 0, 40);
+					sprintf((char *)response_buff, "B %s %s %03d %04d %04d %04d %02d ", HW_VER, FW_VER, get_ac220(), \
+									get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
+					HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
+					HAL_UART_Transmit_IT(&huart2, response_buff, 40);			
+			}
+			
 			if(receive_cnt == 32) {
 				HAL_GPIO_WritePin(RS485_RX_LED_GPIO_Port,RS485_RX_LED_Pin, GPIO_PIN_RESET);
 				switch(debug_buff[0]) {
-					case 'B':
-						if(debug_buff[31] != 'B') {
-							break;
-						}
-						memset(response_buff, 0, 40);
-						sprintf((char *)response_buff, "B %s %s %03d %04d %04d %04d %02d ", HW_VER, FW_VER, get_ac220(), \
-										get_pres(1), get_pres(2), get_ac_state().val, get_dc_state().val);
-						HAL_GPIO_WritePin(RS485_TX_LED_GPIO_Port,RS485_TX_LED_Pin, GPIO_PIN_RESET);
-						HAL_UART_Transmit_IT(&huart2, response_buff, 40);
-						break;
 					case 'R':
 						if(debug_buff[31] != 'R') {
 							break;
