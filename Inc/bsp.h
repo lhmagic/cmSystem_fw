@@ -25,8 +25,8 @@ typedef	struct {
 	int16_t pres2_b;	
 	int16_t pres2_max;
 	int16_t pres2_min;
-	int8_t 	cs1_switch;
-	int8_t 	cs2_switch;
+	int16_t cs1_switch;
+	int16_t cs2_switch;
 } s_sys_para;
 
 typedef union {
