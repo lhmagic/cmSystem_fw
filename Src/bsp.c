@@ -54,10 +54,10 @@ void hc595_write(uint16_t val) {
 uint8_t get_rs485_addr(void) {
 uint8_t addr=0;
 	
-	addr |= (HAL_GPIO_ReadPin(DIP_SW0_GPIO_Port, DIP_SW0_Pin) == GPIO_PIN_RESET) ? 0x01 : 0x00;
-	addr |= (HAL_GPIO_ReadPin(DIP_SW1_GPIO_Port, DIP_SW1_Pin) == GPIO_PIN_RESET) ? 0x02 : 0x00;
-	addr |= (HAL_GPIO_ReadPin(DIP_SW2_GPIO_Port, DIP_SW2_Pin) == GPIO_PIN_RESET) ? 0x04 : 0x00;
-	addr |= (HAL_GPIO_ReadPin(DIP_SW3_GPIO_Port, DIP_SW3_Pin) == GPIO_PIN_RESET) ? 0x08 : 0x00;
+	addr |= (HAL_GPIO_ReadPin(DIP_SW0_GPIO_Port, DIP_SW3_Pin) == GPIO_PIN_RESET) ? 0x01 : 0x00;
+	addr |= (HAL_GPIO_ReadPin(DIP_SW1_GPIO_Port, DIP_SW2_Pin) == GPIO_PIN_RESET) ? 0x02 : 0x00;
+	addr |= (HAL_GPIO_ReadPin(DIP_SW2_GPIO_Port, DIP_SW1_Pin) == GPIO_PIN_RESET) ? 0x04 : 0x00;
+	addr |= (HAL_GPIO_ReadPin(DIP_SW3_GPIO_Port, DIP_SW0_Pin) == GPIO_PIN_RESET) ? 0x08 : 0x00;
 	return addr;
 }
 

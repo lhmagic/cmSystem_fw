@@ -7,8 +7,8 @@
 #include "cmsis_os.h"
 #include "math.h"
 
-#define		HW_VER									"A.0"
-#define		FW_VER									"1.2.6"
+#define		HW_VER									"A.2"
+#define		FW_VER									"1.2.7"
 
 #define		DEBUG_BUFF_MAX					32
 #define		RS485_BUFF_MAX					32
