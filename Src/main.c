@@ -608,8 +608,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, RS485_TX_LED_Pin|RS485_RX_LED_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : DIP_SW2_Pin DIP_SW1_Pin DIP_SW0_Pin */
-  GPIO_InitStruct.Pin = DIP_SW2_Pin|DIP_SW1_Pin|DIP_SW0_Pin;
+  /*Configure GPIO pins : DIP_SW1_Pin DIP_SW2_Pin DIP_SW3_Pin */
+  GPIO_InitStruct.Pin = DIP_SW1_Pin|DIP_SW2_Pin|DIP_SW3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -664,11 +664,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DIP_SW3_Pin */
-  GPIO_InitStruct.Pin = DIP_SW3_Pin;
+  /*Configure GPIO pin : DIP_SW0_Pin */
+  GPIO_InitStruct.Pin = DIP_SW0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(DIP_SW3_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(DIP_SW0_GPIO_Port, &GPIO_InitStruct);
 
 }
 
@@ -770,8 +770,12 @@ uint32_t PreviousWakeTime = osKernelSysTick();
   {
 		if(sys_para.cs1_switch != 0) {
 			HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_SET);
+		} else {
+			HAL_GPIO_WritePin(CS1_PWR_GPIO_Port, CS1_PWR_Pin, GPIO_PIN_RESET);
 		}
 		if(sys_para.cs2_switch != 0) {
+			HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
+		} else {
 			HAL_GPIO_WritePin(CS2_PWR_GPIO_Port, CS2_PWR_Pin, GPIO_PIN_SET);
 		}
 		

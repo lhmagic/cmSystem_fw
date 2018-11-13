@@ -59,12 +59,12 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define DIP_SW2_Pin GPIO_PIN_13
-#define DIP_SW2_GPIO_Port GPIOC
-#define DIP_SW1_Pin GPIO_PIN_14
+#define DIP_SW1_Pin GPIO_PIN_13
 #define DIP_SW1_GPIO_Port GPIOC
-#define DIP_SW0_Pin GPIO_PIN_15
-#define DIP_SW0_GPIO_Port GPIOC
+#define DIP_SW2_Pin GPIO_PIN_14
+#define DIP_SW2_GPIO_Port GPIOC
+#define DIP_SW3_Pin GPIO_PIN_15
+#define DIP_SW3_GPIO_Port GPIOC
 #define AD_CS2_Pin GPIO_PIN_0
 #define AD_CS2_GPIO_Port GPIOA
 #define CS2_PWR_Pin GPIO_PIN_1
@@ -123,8 +123,8 @@
 #define USART_RX_GPIO_Port GPIOB
 #define BEEPER_Pin GPIO_PIN_8
 #define BEEPER_GPIO_Port GPIOB
-#define DIP_SW3_Pin GPIO_PIN_9
-#define DIP_SW3_GPIO_Port GPIOB
+#define DIP_SW0_Pin GPIO_PIN_9
+#define DIP_SW0_GPIO_Port GPIOB
 
 /* ########################## Assert Selection ############################## */
 /**
