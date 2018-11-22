@@ -10,8 +10,7 @@
 #define		HW_VER									"A.2"
 #define		FW_VER									"1.2.7"
 
-#define		DEBUG_BUFF_MAX					32
-#define		RS485_BUFF_MAX					32
+#define		RS485_BUFF_MAX					64
 #define		FILTER_BUFF_SIZE				32
 
 #define		parama_save_addr				0xFF00

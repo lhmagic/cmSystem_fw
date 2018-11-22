@@ -44,8 +44,8 @@ extern uint8_t debug_rx_cplt;
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_adc;
 extern TIM_HandleTypeDef htim14;
+extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
 
 extern TIM_HandleTypeDef htim6;
 
@@ -93,9 +93,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
   /* USER CODE END SysTick_IRQn 0 */
-  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
-    xPortSysTickHandler();
-  }
+  osSystickHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
@@ -120,6 +118,20 @@ void DMA1_Channel1_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
 
   /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
+
+/**
+* @brief This function handles DMA1 channel 2 and 3 interrupts.
+*/
+void DMA1_Channel2_3_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel2_3_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+  /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel2_3_IRQn 1 */
 }
 
 /**
@@ -156,32 +168,15 @@ void TIM14_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-
+	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET) {
+		__HAL_UART_CLEAR_IDLEFLAG(&huart1);
+		usart_rx_cplt = 1;
+	}
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
-	if(READ_REG(huart1.Instance->ISR) & USART_ISR_IDLE) {
-		SET_BIT(huart1.Instance->ICR, USART_ICR_IDLECF);
-		usart_rx_cplt = 1;
-	}
+
   /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
-* @brief This function handles USART2 global interrupt.
-*/
-void USART2_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-	if(READ_REG(huart2.Instance->ISR) & USART_ISR_IDLE) {
-		SET_BIT(huart2.Instance->ICR, USART_ICR_IDLECF);
-		debug_rx_cplt = 1;
-	}
-  /* USER CODE END USART2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
